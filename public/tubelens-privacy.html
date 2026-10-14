@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f0f0f">
+  <meta name="description" content="How TubeLens handles imported YouTube watch history and Google account data.">
+  <title>Privacy Policy — TubeLens</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .policy-page{max-width:900px;margin:0 auto;padding:48px 0 70px}
+    .policy-page h1{font:800 clamp(34px,5vw,48px)/1.12 var(--font-display);letter-spacing:-1.7px;margin:8px 0 12px}
+    .policy-page h2{font:750 19px/1.3 var(--font-display);letter-spacing:-.3px;margin:30px 0 8px}
+    .policy-page p,.policy-page li{font-size:13px;line-height:1.85;color:var(--muted)}
+    .policy-page p{margin:10px 0}
+    .policy-page ul{padding-left:22px}
+    .policy-page li{margin:5px 0}
+    .policy-page a:not(.button){color:var(--text);text-decoration:underline;text-decoration-color:var(--red);text-underline-offset:3px}
+    .policy-meta{color:var(--faint)!important;font-size:11px!important}
+    .policy-callout{margin:24px 0;padding:17px 19px;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--red);border-radius:12px}
+    .policy-callout p{margin:0}
+    .policy-page .policy-contact{overflow-wrap:anywhere}
+    @media(max-width:720px){.policy-page{padding:34px 0 48px}.policy-page h1{letter-spacing:-1px}}
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="TubeLens home">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M23.2 6.2a3 3 0 0 0-2.1-2.1C19.2 3.6 12 3.6 12 3.6s-7.2 0-9.1.5A3 3 0 0 0 .8 6.2C.3 8.1.3 12 .3 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.1.5 9.1.5s7.2 0 9.1-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8ZM9.6 15.6V8.4l6.2 3.6-6.2 3.6Z"/></svg></span>
+        <span class="brand-name">Tube<span>Lens</span></span>
+      </a>
+      <a class="button button-outline button-small" href="/">Back to dashboard ↗</a>
+    </header>
+
+    <main class="policy-page">
+      <div class="section-kicker">YOUR DATA, EXPLAINED</div>
+      <h1>Privacy Policy</h1>
+      <p class="policy-meta">Effective date: 14 October 2026</p>
+      <p>TubeLens is an independent tool that visualises your YouTube viewing patterns. It is not affiliated with or endorsed by YouTube or Google. This policy explains what the current version of TubeLens processes when you use the dashboard or optionally connect a Google account.</p>
+
+      <h2>Watch-history imports</h2>
+      <p>When you choose a Google Takeout <code>watch-history.json</code> file, TubeLens reads and analyses it in your browser using a Web Worker. The file and the resulting viewing statistics stay in the active browser tab's memory; they are not uploaded to the TubeLens server, Google, or an analytics service. Refreshing or closing the tab clears this in-memory history data, so you must import the file again to use it in a new session.</p>
+
+      <h2>Google account and YouTube subscriptions</h2>
+      <p>Connecting your account is optional. If you connect, TubeLens requests the read-only YouTube permission <code>youtube.readonly</code>. It uses the YouTube Data API to retrieve your subscribed-channel list and the channel details returned with those subscriptions, so it can compare subscriptions with the history you imported. TubeLens does not use the YouTube Data API to retrieve your personal watch history, and it does not receive your Google password.</p>
+      <p>OAuth credentials are kept on the TubeLens server, in memory, and are not sent to your browser as tokens. The browser receives an HTTP-only session cookie containing a random session identifier. The local session expires after up to eight hours. Subscription results are cached temporarily in server memory (normally reused for five minutes and cleared by periodic cleanup); restarting the server clears its in-memory sessions and cache.</p>
+
+      <h2>How data is used and shared</h2>
+      <p>Google subscription data is used only to provide the subscription list and related comparisons shown in TubeLens. TubeLens does not sell Google user data, use it for advertising, or use it to train general-purpose AI models. We do not send imported watch-history files or their calculated analytics to third parties.</p>
+      <p>The page loads Chart.js from jsDelivr and web fonts from Google Fonts. Channel thumbnails, when displayed, may load from Google/YouTube image servers. These providers may receive ordinary connection information from your browser, such as your IP address and the requested asset URL; TubeLens does not send your imported history file or chart statistics to them. The hosting provider may also process basic technical request logs under its own policies, and the server writes diagnostic messages for OAuth or API errors.</p>
+      <p>TubeLens's use and transfer of information received from Google APIs complies with the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Google API Services User Data Policy</a>, including its Limited Use requirements.</p>
+
+      <h2>Retention, sign-out and deletion</h2>
+      <p>TubeLens does not save imported watch history or subscription data to a database in the current version. The server holds OAuth credentials and subscription cache only in memory for the temporary session described above. Selecting <strong>Disconnect</strong> attempts to revoke the Google credentials and removes the local session and subscription cache. Because revocation is an online request, it may fail; you can also revoke access in your <a href="https://myaccount.google.com/connections" target="_blank" rel="noopener noreferrer">Google Account connections</a>.</p>
+      <p>Since imported history is not uploaded, there is no server-side copy of that file for TubeLens to delete. Closing or refreshing the tab clears it from the active page. Hosting-provider technical logs may be retained according to that provider's settings and policies.</p>
+
+      <h2>Security and choices</h2>
+      <p>You can use demo mode and import history without connecting Google. The server uses a temporary session, and OAuth tokens are not exposed to frontend JavaScript. No internet service can guarantee absolute security; keep your browser and devices secure, and do not share your Takeout export.</p>
+
+      <h2>Contact</h2>
+      <p>For privacy questions, contact <strong class="policy-contact">[REPLACE WITH YOUR CONTACT EMAIL]</strong>. Before publishing, replace this placeholder with an email address you monitor and keep this policy in sync with any future changes to the application or its data handling.</p>
+    </main>
+
+    <footer class="footer">
+      <a class="brand brand-footer" href="/" aria-label="TubeLens home"><span class="brand-mark"><svg viewBox="0 0 24 24"><path d="M23.2 6.2a3 3 0 0 0-2.1-2.1C19.2 3.6 12 3.6 12 3.6s-7.2 0-9.1.5A3 3 0 0 0 .8 6.2C.3 8.1.3 12 .3 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.1.5 9.1.5s7.2 0 9.1-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8ZM9.6 15.6V8.4l6.2 3.6-6.2 3.6Z"/></svg></span><span class="brand-name">Tube<span>Lens</span></span></a>
+      <p>Made for curiosity. Built with privacy in mind.</p>
+      <div class="footer-right"><span>Not affiliated with YouTube or Google.</span><a href="/">Dashboard</a></div>
+    </footer>
+  </div>
+</body>
+</html>
