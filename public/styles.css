@@ -35,3 +35,7 @@ html[data-theme="light"]{color-scheme:light;--bg:#f7f7f7;--surface:#fff;--surfac
 .details-dialog-footer .button:disabled{cursor:not-allowed;opacity:.4;transform:none}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:520px){.details-dialog{width:calc(100% - 18px);height:90vh;max-height:90vh;border-radius:14px}.details-dialog-shell{max-height:90vh}.details-dialog-header{padding:18px 16px 14px;gap:12px}.details-dialog-header h2{font-size:20px}.details-dialog-header p{font-size:10px}.details-toolbar{padding:11px 16px;align-items:flex-start;flex-direction:column;gap:8px}.details-search{width:100%}.details-dialog-list{padding:0 16px}.details-dialog-footer{padding:11px 16px;gap:8px}.details-dialog-footer .button{padding:8px 9px}.list-actions .text-button{font-size:10px}}
+
+
+/* Privacy disclosure displayed beside YouTube subscription connection. */
+.connection-privacy-note{margin-top:7px!important;max-width:720px;font-size:10px!important;line-height:1.65!important;color:var(--faint)!important}.connection-privacy-note a{color:var(--text);text-decoration:underline;text-decoration-color:var(--red);text-underline-offset:3px}.connection-privacy-note a:hover{color:var(--red)}
