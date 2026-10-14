@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f0f0f">
+  <meta name="description" content="A private, visual way to explore your YouTube watch-history export and subscriptions.">
+  <title>TubeLens — Your YouTube, in perspective</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="TubeLens home">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M23.2 6.2a3 3 0 0 0-2.1-2.1C19.2 3.6 12 3.6 12 3.6s-7.2 0-9.1.5A3 3 0 0 0 .8 6.2C.3 8.1.3 12 .3 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.1.5 9.1.5s7.2 0 9.1-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8ZM9.6 15.6V8.4l6.2 3.6-6.2 3.6Z"/></svg></span>
+        <span class="brand-name">Tube<span>Lens</span></span>
+      </a>
+      <div class="topbar-right">
+        <span id="connection-pill" class="connection-pill"><span class="status-dot"></span><span id="connection-label">Not connected</span></span>
+        <button class="icon-button" id="theme-toggle" type="button" aria-label="Switch colour theme" title="Switch colour theme"><span id="theme-icon">☼</span></button>
+        <a class="button button-google button-small" id="connect-top" href="/auth/google"><span class="google-g">G</span> Connect YouTube</a>
+        <button class="button button-quiet button-small hidden" id="disconnect-top" type="button">Disconnect</button>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="eyebrow-dot"></span> YOUR VIEWING, VISUALISED</div>
+          <h1>Your YouTube.<br><span>In perspective.</span></h1>
+          <p class="hero-description">Find your favourite creators, revisit your viewing eras, and uncover the habits hidden in your watch history.</p>
+          <div class="hero-actions">
+            <button class="button button-primary" id="import-cta" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg> Import watch history</button>
+            <button class="button button-outline" id="demo-cta" type="button">Explore demo <span aria-hidden="true">↗</span></button>
+            <input id="history-file" type="file" accept=".json,application/json" hidden>
+          </div>
+          <div class="privacy-note"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3m-4 4v3"/></svg><span>Your history is analysed in your browser. It is never uploaded to this app.</span></div>
+        </div>
+        <div class="hero-art" aria-label="Abstract dashboard preview">
+          <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+          <div class="art-glow"></div>
+          <div class="preview-card preview-main">
+            <div class="preview-head"><span class="preview-label">YOUR TOP CREATOR</span><span class="live-dot"></span></div>
+            <div class="preview-channel"><div class="creator-avatar avatar-red">M</div><div><strong id="preview-creator">Mark Rober</strong><span id="preview-creator-sub">Creator spotlight</span></div><span class="preview-rank">#1</span></div>
+            <div class="preview-chart" aria-hidden="true"><span style="height:28%"></span><span style="height:42%"></span><span style="height:35%"></span><span style="height:64%"></span><span style="height:49%"></span><span style="height:80%"></span><span style="height:58%"></span><span style="height:95%"></span><span style="height:68%"></span><span style="height:100%"></span><span style="height:83%"></span><span style="height:73%"></span></div>
+            <div class="preview-foot"><span>VIEWING ACTIVITY</span><span class="preview-growth">↗ Your story, in data</span></div>
+          </div>
+          <div class="floating-stat stat-top"><span class="floating-icon red">▶</span><div><strong id="preview-views">2,481</strong><small>watch events</small></div></div>
+          <div class="floating-stat stat-bottom"><span class="floating-icon yellow">✦</span><div><strong id="preview-channels">38</strong><small>creators explored</small></div></div>
+        </div>
+      </section>
+
+      <section class="data-banner" id="data-banner">
+        <div class="banner-icon">✦</div><div class="banner-copy"><strong id="data-banner-title">Start with a watch-history export</strong><p id="data-banner-copy">The YouTube Data API does not provide your personal watch history. Import Google's Takeout JSON to unlock viewing analytics, then connect YouTube to compare them with your subscriptions.</p></div>
+        <button class="text-button" id="banner-import" type="button">Choose file <span>→</span></button>
+      </section>
+      <div id="notice" class="notice hidden" role="status" aria-live="polite"></div>
+
+      <section class="dashboard-section" id="dashboard">
+        <div class="section-heading">
+          <div><div class="section-kicker">YOUR OVERVIEW <span class="demo-tag" id="demo-tag">DEMO DATA</span></div><h2>The big picture</h2><p id="range-description">A sample dashboard to show what's possible with your history.</p></div>
+          <label class="range-control"><span>TIME RANGE</span><select id="range-select" aria-label="Choose analytics time range"><option value="all">Entire history</option><option value="365">Last 12 months</option><option value="90">Last 90 days</option><option value="30">Last 30 days</option></select></label>
+        </div>
+        <div class="metric-grid">
+          <article class="metric-card metric-featured"><div class="metric-top"><span class="metric-label">WATCH EVENTS</span><span class="metric-icon">▶</span></div><div class="metric-value" id="metric-views">2,481</div><div class="metric-foot"><span id="metric-views-note">Across your selected period</span><span class="metric-arrow">↗</span></div><div class="metric-spark spark-red" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
+          <article class="metric-card"><div class="metric-top"><span class="metric-label">UNIQUE VIDEOS</span><span class="metric-icon muted">▤</span></div><div class="metric-value" id="metric-videos">1,726</div><div class="metric-foot"><span id="metric-videos-note">Distinct video IDs</span></div><div class="metric-spark spark-blue" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
+          <article class="metric-card"><div class="metric-top"><span class="metric-label">CREATORS WATCHED</span><span class="metric-icon muted">◎</span></div><div class="metric-value" id="metric-channels">38</div><div class="metric-foot"><span id="metric-channels-note">Identified channels</span></div><div class="metric-spark spark-purple" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
+          <article class="metric-card"><div class="metric-top"><span class="metric-label">ACTIVE DAYS</span><span class="metric-icon muted">▦</span></div><div class="metric-value" id="metric-days">219</div><div class="metric-foot"><span id="metric-days-note">Days with a watch event</span></div><div class="metric-spark spark-yellow" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
+        </div>
+
+        <div class="chart-grid">
+          <article class="panel panel-wide">
+            <div class="panel-heading"><div><div class="panel-kicker">OVER TIME</div><h3>Your viewing rhythm</h3><p>Watch events recorded each day</p></div><span class="chart-chip"><span class="legend-dot red-dot"></span> Views</span></div>
+            <div class="chart-area chart-line-area"><canvas id="activity-chart" aria-label="Daily watch activity chart"></canvas><div class="chart-empty hidden" id="activity-empty">Import your watch history to reveal your viewing rhythm.</div></div>
+            <div class="list-actions chart-list-actions"><button class="text-button" type="button" data-open-details="daily">View daily details <span>↗</span></button></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading"><div><div class="panel-kicker">CREATOR MIX</div><h3>Who you watch</h3><p>Share of your top creators</p></div><span class="panel-symbol">◌</span></div>
+            <div class="chart-area chart-doughnut-area"><canvas id="creator-chart" aria-label="Top creators doughnut chart"></canvas><div class="doughnut-center" id="doughnut-center"><strong>38</strong><span>CREATORS</span></div></div>
+            <div id="creator-legend" class="mini-legend"></div>
+            <div class="list-actions chart-list-actions"><button class="text-button" type="button" data-open-details="channels">View all creators <span>↗</span></button></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading"><div><div class="panel-kicker">BY MONTH</div><h3>Viewing seasons</h3><p>When your watch history was busiest</p></div><span class="panel-symbol">▥</span></div>
+            <div class="chart-area chart-month-area"><canvas id="month-chart" aria-label="Monthly watch activity chart"></canvas></div>
+            <div class="list-actions chart-list-actions"><button class="text-button" type="button" data-open-details="monthly">View monthly details <span>↗</span></button></div>
+          </article>
+          <article class="panel panel-wide">
+            <div class="panel-heading"><div><div class="panel-kicker">YOUR TOP 8</div><h3>Creator leaderboard</h3><p>Ranked by watch-history events, not watch duration</p></div><span class="panel-symbol">↗</span></div>
+            <div class="chart-area chart-bar-area"><canvas id="channels-chart" aria-label="Top creators horizontal bar chart"></canvas></div>
+            <div class="list-actions chart-list-actions"><button class="text-button" type="button" data-open-details="channels">View all creators <span>↗</span></button></div>
+          </article>
+          <article class="panel panel-wide">
+            <div class="panel-heading"><div><div class="panel-kicker">WHEN YOU WATCH</div><h3>Your weekly heatmap</h3><p>Patterns by weekday and hour of day</p></div><span class="panel-symbol">▦</span></div>
+            <div id="heatmap" class="heatmap-wrap" role="img" aria-label="Viewing activity by weekday and hour"></div>
+            <div class="heatmap-scale"><span>Less active</span><div class="scale-blocks"><i></i><i></i><i></i><i></i><i></i></div><span>More active</span></div>
+            <div class="list-actions chart-list-actions"><button class="text-button" type="button" data-open-details="heatmap">Explore hourly data <span>↗</span></button></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading"><div><div class="panel-kicker">MOST REVISITED</div><h3>Your top videos</h3><p>Titles that appear most often in this export</p></div><span class="panel-symbol">▶</span></div>
+            <div id="top-videos-list" class="rank-list"><div class="empty-row">Your most-watched videos will appear here.</div></div>
+            <div id="top-videos-actions" class="list-actions"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading"><div><div class="panel-kicker">ON REPEAT</div><h3>Comfort watches</h3><p>Videos that show up more than once</p></div><span class="panel-symbol">⟲</span></div>
+            <div id="repeat-list" class="rank-list"><div class="empty-row">Your repeat watches will appear here.</div></div>
+            <div id="repeat-actions" class="list-actions"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading"><div><div class="panel-kicker">YOUR HABITS</div><h3>Little discoveries</h3><p>Small patterns from your history</p></div><span class="panel-symbol">✦</span></div>
+            <div id="insights-list" class="insights-list"><div class="empty-row">Your personal patterns will appear here.</div></div>
+            <div id="insights-actions" class="list-actions"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="subscription-section" id="subscriptions">
+        <div class="section-heading section-heading-sub"><div><div class="section-kicker">YOUR SUBSCRIPTIONS</div><h2>Does your watch list match?</h2><p>Connect YouTube to compare subscribed creators with the channels in your imported history.</p></div><a class="button button-outline button-small" id="connect-subscriptions" href="/auth/google">Connect YouTube <span>↗</span></a></div>
+        <div class="subscription-grid">
+          <article class="panel match-panel"><div class="panel-heading"><div><div class="panel-kicker">THE CROSSOVER</div><h3>Subscriptions you actually watch</h3><p>Matched by channel ID where possible, name otherwise</p></div><span class="panel-symbol">⇄</span></div><div id="subscription-summary" class="subscription-summary"><div class="subscription-placeholder"><span class="placeholder-orbit">◎</span><strong>Bring both sides together</strong><span>Import history + connect YouTube to find your most-watched subscription.</span></div></div><div id="watched-subscriptions-actions" class="list-actions"></div></article>
+          <article class="panel subscriptions-panel"><div class="panel-heading"><div><div class="panel-kicker">YOUR CREATOR ROSTER</div><h3>Subscribed channels</h3><p id="subscription-count-label">Read-only snapshot from YouTube</p></div><span class="panel-symbol">☰</span></div><div id="subscriptions-list" class="subscription-list"><div class="empty-row">Connect your YouTube account to load subscriptions.</div></div><div id="subscriptions-actions" class="list-actions"></div></article>
+        </div>
+      </section>
+
+      <section class="bottom-cta">
+        <div class="bottom-cta-icon">✦</div><div><h2>Your story is already in the data.</h2><p>Import a fresh Takeout export whenever you want to explore a new chapter.</p></div><button class="button button-primary" id="bottom-import" type="button">Import watch history <span>↑</span></button>
+      </section>
+    </main>
+
+    <dialog id="details-dialog" class="details-dialog" aria-labelledby="details-dialog-title">
+      <div class="details-dialog-shell">
+        <header class="details-dialog-header">
+          <div><div class="panel-kicker" id="details-dialog-kicker">YOUR DATA</div><h2 id="details-dialog-title">Explore details</h2><p id="details-dialog-description">More detail from your viewing history.</p></div>
+          <button id="details-dialog-close" class="icon-button details-close" type="button" aria-label="Close details panel" title="Close">×</button>
+        </header>
+        <div class="details-toolbar"><span id="details-result-count" aria-live="polite">0 items</span><label class="details-search"><span class="sr-only">Search this list</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg><input id="details-search-input" type="search" placeholder="Search this list…" autocomplete="off"></label></div>
+        <div id="details-dialog-list" class="details-dialog-list" aria-live="polite"><div class="empty-row">No items to show.</div></div>
+        <footer class="details-dialog-footer"><span id="details-page-label">Page 1 of 1</span><div><button id="details-page-prev" class="button button-outline button-small" type="button">← Previous</button><button id="details-page-next" class="button button-outline button-small" type="button">Next →</button></div></footer>
+      </div>
+    </dialog>
+
+    <footer class="footer"><a class="brand brand-footer" href="#top"><span class="brand-mark"><svg viewBox="0 0 24 24"><path d="M23.2 6.2a3 3 0 0 0-2.1-2.1C19.2 3.6 12 3.6 12 3.6s-7.2 0-9.1.5A3 3 0 0 0 .8 6.2C.3 8.1.3 12 .3 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.1.5 9.1.5s7.2 0 9.1-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8ZM9.6 15.6V8.4l6.2 3.6-6.2 3.6Z"/></svg></span><span class="brand-name">Tube<span>Lens</span></span></a><p>Made for curiosity. Built with privacy in mind.</p><div class="footer-right"><span>Not affiliated with YouTube or Google.</span><a href="https://takeout.google.com/" target="_blank" rel="noreferrer">Google Takeout ↗</a><a href="https://developers.google.com/youtube/v3" target="_blank" rel="noreferrer">YouTube API docs ↗</a></div></footer>
+  </div>
+</body>
+</html>

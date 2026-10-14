@@ -1,0 +1,20 @@
+{
+  "name": "tubelens-youtube-insights",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A local-first YouTube viewing-history analytics dashboard with optional read-only subscription sync.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "NODE_ENV=development node --watch server.js",
+    "check": "node --check server.js && node --check public/app.js && node --check public/history-worker.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "googleapis": "^144.0.0",
+    "helmet": "^8.0.0"
+  }
+}
