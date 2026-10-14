@@ -1,6 +1,7 @@
 /* All imported watch-history parsing and aggregation stays inside this browser worker. */
 'use strict';
 let cachedEvents = [];
+let channelOverrides = Object.create(null);
 
 function videoIdFromUrl(rawUrl) {
   if (typeof rawUrl !== 'string') return '';
@@ -40,6 +41,31 @@ function fmtDate(ts) {
 function normaliseName(value) {
   return String(value || '').toLocaleLowerCase().normalize('NFKC').replace(/[®™]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
+function classifyMusic(item, title, channelName) {
+  let host = '';
+  try { host = new URL(item.titleUrl).hostname.toLowerCase().replace(/^www\./, ''); } catch { /* Missing or invalid URL is not a music signal. */ }
+  const products = [item.header, ...(Array.isArray(item.products) ? item.products : []), ...(Array.isArray(item.activityControls) ? item.activityControls : [])]
+    .filter(value => typeof value === 'string').join(' ');
+  if (host === 'music.youtube.com' || /\byoutube music\b/i.test(products)) {
+    return { autoContentType: 'music', autoReason: 'YouTube Music source' };
+  }
+  if (/[\s\-–—]topic$/i.test(channelName)) {
+    return { autoContentType: 'music', autoReason: 'YouTube Topic channel name' };
+  }
+  if (/vevo/i.test(channelName)) {
+    return { autoContentType: 'music', autoReason: 'VEVO channel name' };
+  }
+  const musicTitlePattern = /\bofficial\s+(?:(?:music|lyric)\s+)?video\b|\bofficial\s+audio\b|\blyric(?:s)?(?:\s+video)?\b|\bvisuali[sz]er\b|\b(?:full\s+album|album\s+stream|music\s+video)\b|[\[(]\s*(?:official\s+)?(?:audio|lyrics?|music video|visuali[sz]er)\s*[\])]/i;
+  if (musicTitlePattern.test(title)) {
+    return { autoContentType: 'music', autoReason: 'Music-specific title marker' };
+  }
+  return { autoContentType: 'video', autoReason: 'No clear music signal' };
+}
+function effectiveContentType(event) {
+  const override = channelOverrides[event.channelKey];
+  if (override === 'music' || override === 'video') return override;
+  return event.autoContentType || 'video';
+}
 function extractEvents(items) {
   if (!Array.isArray(items)) throw new Error('This does not look like a YouTube Takeout watch-history JSON file. The file should contain a JSON array.');
   const events = [];
@@ -58,6 +84,7 @@ function extractEvents(items) {
     if (!channelName) channelName = 'Unknown creator';
     let title = String(item.title || '').replace(/^Watched\s+/i, '').trim();
     if (!title || /^watched a video that has been removed/i.test(title)) title = 'Unavailable video';
+    const musicClass = classifyMusic(item, title, channelName);
     // Keep a normalised URL so the dashboard never opens an arbitrary imported URL.
     events.push({
       ts,
@@ -67,17 +94,46 @@ function extractEvents(items) {
       channelId: channelId.slice(0, 100),
       channelKey: channelId ? `id:${channelId}` : `name:${normaliseName(channelName) || 'unknown creator'}`,
       channelUrl: channelId ? `https://www.youtube.com/channel/${encodeURIComponent(channelId)}` : '',
-      videoUrl: `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`
+      videoUrl: `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`,
+      autoContentType: musicClass.autoContentType,
+      autoReason: musicClass.autoReason
     });
   }
   events.sort((a, b) => a.ts - b.ts);
   return events;
 }
-function computeStats(days) {
-  if (!cachedEvents.length) return { totalViews: 0, uniqueVideos: 0, uniqueChannels: 0, activeDays: 0, dateRange: null, daily: [], monthly: [], channels: [], videos: [], weekdayCounts: [], hourCounts: [], heatmap: [], sessions: { count: 0, avgVideos: 0, longest: 0 }, repeatCount: 0, rabbitHoles: [] };
+function computeStats(days, contentFilter = 'all') {
+  if (!cachedEvents.length) return { totalViews: 0, uniqueVideos: 0, uniqueChannels: 0, activeDays: 0, dateRange: null, daily: [], monthly: [], channels: [], videos: [], weekdayCounts: [], hourCounts: [], heatmap: [], sessions: { count: 0, avgVideos: 0, longest: 0 }, repeatCount: 0, rabbitHoles: [], contentFilter, contentCounts: { all: 0, video: 0, music: 0 }, channelsForClassification: [] };
   const newest = cachedEvents[cachedEvents.length - 1].ts;
   const cutoff = days === 'all' ? -Infinity : newest - (Number(days) - 1) * 86400000;
-  const events = days === 'all' ? cachedEvents : cachedEvents.filter(e => e.ts >= cutoff);
+  const rangeEvents = days === 'all' ? cachedEvents : cachedEvents.filter(e => e.ts >= cutoff);
+  const channelReview = new Map();
+  const contentCounts = { all: rangeEvents.length, video: 0, music: 0 };
+  for (const event of rangeEvents) {
+    const category = effectiveContentType(event);
+    contentCounts[category] += 1;
+    let row = channelReview.get(event.channelKey);
+    if (!row) {
+      row = { key: event.channelKey, channelId: event.channelId, name: event.channelName, channelUrl: event.channelUrl, views: 0, autoMusicEvents: 0, autoVideoEvents: 0, reasons: Object.create(null) };
+      channelReview.set(event.channelKey, row);
+    }
+    row.views += 1;
+    if (event.autoContentType === 'music') row.autoMusicEvents += 1;
+    else row.autoVideoEvents += 1;
+    row.reasons[event.autoReason] = (row.reasons[event.autoReason] || 0) + 1;
+    if (!row.channelUrl && event.channelUrl) row.channelUrl = event.channelUrl;
+  }
+  const channelsForClassification = [...channelReview.values()].map(row => {
+    const reasons = Object.entries(row.reasons).sort((a, b) => b[1] - a[1]);
+    return { key: row.key, channelId: row.channelId, name: row.name, channelUrl: row.channelUrl, views: row.views,
+      autoMusicEvents: row.autoMusicEvents, autoVideoEvents: row.autoVideoEvents,
+      topAutoReason: reasons[0]?.[0] || 'No clear music signal', override: channelOverrides[row.key] || 'auto' };
+  }).sort((a, b) => b.views - a.views || a.name.localeCompare(b.name));
+  const events = contentFilter === 'music'
+    ? rangeEvents.filter(event => effectiveContentType(event) === 'music')
+    : contentFilter === 'video'
+      ? rangeEvents.filter(event => effectiveContentType(event) !== 'music')
+      : rangeEvents;
   const channels = new Map();
   const videos = new Map();
   const daily = new Map();
@@ -160,10 +216,13 @@ function computeStats(days) {
   const topRabbitHoles = rabbitHoles.sort((a, b) => b.views - a.views || b.spanMinutes - a.spanMinutes).slice(0, 5);
   return {
     totalViews: events.length,
+    contentFilter,
+    contentCounts,
+    channelsForClassification,
     uniqueVideos: videos.size,
     uniqueChannels: [...channels.values()].filter(ch => ch.name !== 'Unknown creator').length,
     activeDays: activeDays.size,
-    dateRange: { start: minTs, end: maxTs, startLabel: fmtDate(minTs), endLabel: fmtDate(maxTs) },
+    dateRange: events.length ? { start: minTs, end: maxTs, startLabel: fmtDate(minTs), endLabel: fmtDate(maxTs) } : null,
     daily: dayList,
     monthly: monthList,
     channels: channelList,
@@ -192,11 +251,26 @@ self.onmessage = event => {
       catch { throw new Error('The selected file could not be parsed as JSON. Choose the watch-history.json file from Google Takeout.'); }
       cachedEvents = extractEvents(json);
       if (!cachedEvents.length) throw new Error('No watched videos were found. Choose YouTube and YouTube Music → history → watch-history.json from Google Takeout.');
-      const stats = computeStats('all');
+      const contentFilter = message.contentFilter || 'all';
+      const stats = computeStats('all', contentFilter);
       self.postMessage({ type: 'parsed', stats, recordsRead: json.length, matchedEvents: cachedEvents.length });
     } else if (message.type === 'range') {
-      const stats = computeStats(message.days || 'all');
-      self.postMessage({ type: 'stats', stats, days: message.days || 'all' });
+      const days = message.days || 'all';
+      const contentFilter = message.contentFilter || 'all';
+      const stats = computeStats(days, contentFilter);
+      self.postMessage({ type: 'stats', stats, days, contentFilter });
+    } else if (message.type === 'overrides') {
+      const incoming = message.overrides && typeof message.overrides === 'object' ? message.overrides : {};
+      channelOverrides = Object.create(null);
+      for (const [key, value] of Object.entries(incoming)) {
+        if (typeof key === 'string' && key.length <= 400 && (value === 'music' || value === 'video')) channelOverrides[key] = value;
+      }
+      if (cachedEvents.length) {
+        const days = message.days || 'all';
+        const contentFilter = message.contentFilter || 'all';
+        const stats = computeStats(days, contentFilter);
+        self.postMessage({ type: 'stats', stats, days, contentFilter });
+      }
     } else if (message.type === 'clear') {
       cachedEvents = [];
       self.postMessage({ type: 'cleared' });

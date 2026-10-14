@@ -9,6 +9,7 @@ A responsive, YouTube-inspired analytics dashboard built with HTML, CSS, vanilla
 - Imports Google Takeout's `watch-history.json` and computes the viewing analytics **in the browser**.
 - Shows watch-event and unique-video counts, creators by activity, monthly trends, daily activity, weekday/hour heatmaps, repeat watches, recurring viewing sessions, peak days/hours, and creator rabbit-hole patterns.
 - Lets you filter the visualisations by the whole export, the last 12 months, 90 days, or 30 days relative to the newest event in the export.
+- Separates likely music plays from other videos using local signals (YouTube Music source metadata, “- Topic” and VEVO channel names, and music-specific title markers). The global All content / Regular videos / Music selector filters the whole dashboard. Use Review music labels to override a channel classification; these overrides are held in memory for the current tab only.
 - Optionally connects a Google account through a server-side OAuth flow and retrieves the user's YouTube subscriptions using read-only access. It compares channel IDs when possible and channel names as a fallback to identify the most-watched subscribed channel.
 - Includes sample data so the UI can be explored before importing any personal data.
 - Supports dark and light themes and mobile layouts.
@@ -17,7 +18,7 @@ A responsive, YouTube-inspired analytics dashboard built with HTML, CSS, vanilla
 
 The YouTube Data API does **not** provide an authenticated user's personal watch-history feed. The dashboard therefore gets watch events from the user's own Google Takeout export, not from the YouTube API. The YouTube Data API integration retrieves subscriptions only. See the official [Subscriptions: list documentation](https://developers.google.com/youtube/v3/docs/subscriptions/list) and Google's [Takeout activity export format](https://github.com/google/takeout/blob/main/README.md).
 
-A Takeout watch-history entry records a viewing event; it does not reliably provide how long the viewer watched. TubeLens deliberately reports **watch events**, not hours watched or total watch time. It also cannot recover entries missing from the export, deleted history, or videos that were not included by Google Takeout. Channel matching may be incomplete if a channel's identity/name changed or the export lacks channel metadata.
+A Takeout watch-history entry records a viewing event; it does not reliably provide how long the viewer watched. TubeLens deliberately reports **watch events**, not hours watched or total watch time. It also cannot recover entries missing from the export, deleted history, or videos that were not included by Google Takeout. Channel matching may be incomplete if a channel's identity/name changed or the export lacks channel metadata. Music classification is necessarily heuristic: the current Takeout fields and the existing subscription integration do not provide a universal Official Artist Channel flag or video category for every past view. Some music may be missed and some titles may be false positives; users can override labels locally.
 
 ## Requirements
 

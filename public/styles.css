@@ -39,3 +39,19 @@ html[data-theme="light"]{color-scheme:light;--bg:#f7f7f7;--surface:#fff;--surfac
 
 /* Privacy disclosure displayed beside YouTube subscription connection. */
 .connection-privacy-note{margin-top:7px!important;max-width:720px;font-size:10px!important;line-height:1.65!important;color:var(--faint)!important}.connection-privacy-note a{color:var(--text);text-decoration:underline;text-decoration-color:var(--red);text-underline-offset:3px}.connection-privacy-note a:hover{color:var(--red)}
+
+
+/* Content-type filter and local music-classification controls. */
+.dashboard-controls{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;max-width:680px}
+.dashboard-controls .range-control{gap:8px}
+.dashboard-controls .range-control select{max-width:190px}
+.music-review-button{font-size:10px;padding:7px 0;white-space:nowrap}
+.content-filter-note{font-size:10px!important;line-height:1.6!important;color:var(--faint)!important;margin:-11px 0 19px!important;max-width:900px}
+.music-rule-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.music-rule-row:last-child{border-bottom:0}
+.music-rule-row .rank-thumb{font-size:17px;color:var(--red)}
+.music-rule-reason{font-size:9px;color:var(--faint);margin-top:3px;white-space:normal}
+.music-rule-control{flex:0 0 125px}
+.music-rule-control select{width:100%;max-width:100%;padding:8px 25px 8px 9px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);color:var(--text);font:600 10px var(--font-body)}
+@media(max-width:1000px){.dashboard-controls{max-width:540px;gap:8px}.dashboard-controls .range-control{justify-content:space-between}}
+@media(max-width:720px){.dashboard-controls{width:100%;max-width:none;display:grid;grid-template-columns:1fr;gap:10px}.dashboard-controls .range-control{width:100%;justify-content:space-between}.dashboard-controls .range-control select{flex:0 0 190px;max-width:calc(100% - 105px)}.music-review-button{justify-self:start}.content-filter-note{margin:-4px 0 16px!important}.music-rule-row{gap:8px}.music-rule-control{flex-basis:112px}.music-rule-row .rank-thumb{width:29px;flex-basis:29px}}

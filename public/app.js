@@ -18,6 +18,8 @@ let detailsDefinition = null;
 let detailsPage = 0;
 let detailsQuery = '';
 let selectedRange = 'all';
+let selectedContentFilter = 'all';
+let channelOverrides = Object.create(null);
 let worker = null;
 let lastRecordsRead = 0;
 
@@ -27,6 +29,26 @@ function escapeHTML(value) {
 }
 function normaliseName(value) {
   return String(value || '').toLocaleLowerCase().normalize('NFKC').replace(/[®™]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+function updateContentFilterUI(stats = currentStats) {
+  const select = $('#content-filter');
+  if (!select || !stats) return;
+  const counts = stats.contentCounts || { all: stats.totalViews || 0, video: stats.totalViews || 0, music: 0 };
+  const labels = [
+    ['all', `All content · ${fmtNum(counts.all)}`],
+    ['video', `Regular videos · ${fmtNum(counts.video)}`],
+    ['music', `Music · ${fmtNum(counts.music)}`]
+  ];
+  for (const [value, label] of labels) {
+    const option = [...select.options].find(item => item.value === value);
+    if (option) option.textContent = label;
+  }
+  select.value = selectedContentFilter;
+  const note = $('#content-filter-note');
+  if (note) note.textContent = `Music detection is estimated from YouTube Music source records, “- Topic”/VEVO channel names, and music-specific title markers. Unmarked music can be missed. Use “Review music labels” to correct a channel; overrides stay in this browser tab only.`;
+}
+function requestCurrentStats() {
+  if (worker) worker.postMessage({ type: 'range', days: selectedRange, contentFilter: selectedContentFilter });
 }
 function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 function setNotice(message, type = '') {
@@ -60,8 +82,11 @@ function handleWorkerMessage(message) {
     sourceMode = parseMode;
     lastRecordsRead = message.recordsRead;
     selectedRange = 'all';
+    selectedContentFilter = 'all';
     Object.keys(expandedLists).forEach(key => delete expandedLists[key]);
     $('#range-select').value = 'all';
+    $('#content-filter').value = 'all';
+    updateContentFilterUI(currentStats);
     $('#demo-tag').classList.toggle('hidden', sourceMode !== 'demo');
     $('#range-description').textContent = sourceMode === 'demo'
       ? 'A sample dashboard to show what your own watch history can reveal.'
@@ -84,13 +109,20 @@ function handleWorkerMessage(message) {
   if (message.type === 'stats') {
     currentStats = message.stats;
     Object.keys(expandedLists).forEach(key => delete expandedLists[key]);
-    selectedRange = message.days;
+    selectedRange = message.days || selectedRange;
+    selectedContentFilter = message.contentFilter || currentStats.contentFilter || selectedContentFilter;
+    updateContentFilterUI(currentStats);
     const selectedLabel = selectedRange === 'all' ? 'entire export' : selectedRange === '365' ? '12 months before the last event' : `${selectedRange} days before the last event`;
+    const contentLabel = selectedContentFilter === 'music' ? 'music' : selectedContentFilter === 'video' ? 'regular video' : 'all-content';
     $('#range-description').textContent = sourceMode === 'demo'
-      ? `Sample data · ${selectedLabel}. Import your own Takeout file to replace this demo.`
-      : `${fmtNum(currentStats.totalViews)} watch events · ${selectedLabel}${currentStats.dateRange ? ` · ${currentStats.dateRange.startLabel} – ${currentStats.dateRange.endLabel}` : ''}.`;
+      ? `Sample data · ${selectedLabel} · ${contentLabel}. Import your own Takeout file to replace this demo.`
+      : `${fmtNum(currentStats.totalViews)} ${contentLabel} watch events · ${selectedLabel}${currentStats.dateRange ? ` · ${currentStats.dateRange.startLabel} – ${currentStats.dateRange.endLabel}` : ''}.`;
     renderDashboard();
     renderSubscriptionInsights();
+    if (detailsKey) {
+      detailsDefinition = getDetailsDefinition(detailsKey);
+      renderDetailsDialog();
+    }
   }
 }
 
@@ -116,13 +148,15 @@ function makeDemoTakeout() {
     ['Fireship', 'UCdemoFireship'], ['Real Engineering', 'UCdemoRealEngineering'], ['TED-Ed', 'UCdemoTEDEd'],
     ['Vox', 'UCdemoVox'], ['SmarterEveryDay', 'UCdemoSmarterEveryDay'], ['Internet Historian', 'UCdemoInternetHistorian'],
     ['How Ridiculous', 'UCdemoHowRidiculous'], ['Simon Clark', 'UCdemoSimonClark'], ['Half as Interesting', 'UCdemoHAI'],
-    ['Technology Connections', 'UCdemoTechnologyConnections'], ['NileRed', 'UCdemoNileRed']
+    ['Technology Connections', 'UCdemoTechnologyConnections'], ['NileRed', 'UCdemoNileRed'],
+    ['Daft Punk - Topic', 'UCdemoDaftPunkTopic'], ['The Weeknd - Topic', 'UCdemoWeekndTopic'], ['ODESZA', 'UCdemoODESZA'], ['Coldplay - Topic', 'UCdemoColdplayTopic']
   ];
   const titles = ['I built the world’s largest…', 'The hidden science of everyday things', 'Why this actually works', 'A surprisingly deep dive into…', 'Testing the limits of…', 'The experiment nobody expected', 'Everything you should know about…', 'I tried this for 30 days', 'How it works: the complete story', 'The most satisfying project yet', 'This changes how you see the world', 'A tiny detail with a huge impact', 'Making an impossible idea real', 'The internet’s strangest mystery', 'Can we solve this with science?', 'What happened when we tested it?', 'A practical guide to a complicated topic', 'The full story behind the design', 'I finally understand this concept', 'Ten things that surprised me'];
+  const musicTitles = ['Midnight Lights (Official Audio)', 'Never Let Go (Official Music Video)', 'Summer Again (Lyrics)', 'Live Forever - Visualizer', 'Debut Album (Full Album)'];
   const rng = (() => { let seed = 781239; return () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }; })();
   const weights = creators.map((_, i) => 1 / Math.pow(i + 1, 0.85));
   const chooseCreator = () => { let x = rng() * weights.reduce((a, b) => a + b, 0); for (let i = 0; i < weights.length; i++) { x -= weights[i]; if (x <= 0) return i; } return 0; };
-  const ids = Array.from({ length: 160 }, (_, i) => `demoV${String(i + 1).padStart(6, '0')}`);
+  const ids = Array.from({ length: creators.length * 8 }, (_, i) => `demoV${String(i + 1).padStart(6, '0')}`);
   const viewedByCreator = new Map();
   const base = Date.now() - 420 * 86400000;
   const count = 2100;
@@ -139,7 +173,8 @@ function makeDemoTakeout() {
     seenForCreator.add(videoWithinCreator);
     viewedByCreator.set(creatorIndex, seenForCreator);
     const vidIndex = creatorIndex * 8 + videoWithinCreator;
-    const title = titles[Math.floor(rng() * titles.length)];
+    const isMusicCreator = creator[0].endsWith(' - Topic') || creator[0] === 'ODESZA';
+    const title = isMusicCreator ? musicTitles[Math.floor(rng() * musicTitles.length)] : titles[Math.floor(rng() * titles.length)];
     const ts = base + Math.floor(rng() * 420 * 86400000);
     const date = new Date(ts).toISOString();
     const hour = Math.floor(rng() * 24);
@@ -148,7 +183,7 @@ function makeDemoTakeout() {
     records.push({
       header: 'YouTube', title: `Watched ${title}`, titleUrl: `https://www.youtube.com/watch?v=${ids[vidIndex]}`,
       subtitles: [{ name: creator[0], url: `https://www.youtube.com/channel/${creator[1]}` }],
-      time: adjusted.toISOString(), products: ['YouTube']
+      time: adjusted.toISOString(), products: [creator[0].endsWith(' - Topic') ? 'YouTube Music' : 'YouTube']
     });
   }
   // Introduce some realistic recurring favourites from a few creators.
@@ -167,13 +202,13 @@ function renderDashboard() {
   $('#metric-videos').textContent = fmtNum(currentStats.uniqueVideos);
   $('#metric-channels').textContent = fmtNum(currentStats.uniqueChannels);
   $('#metric-days').textContent = fmtNum(currentStats.activeDays);
-  $('#metric-views-note').textContent = sourceMode === 'demo' ? 'Illustrative sample data' : 'Video watch-history events';
+  $('#metric-views-note').textContent = sourceMode === 'demo' ? 'Illustrative sample data' : (selectedContentFilter === 'music' ? 'Detected music events' : selectedContentFilter === 'video' ? 'Non-music / unclassified events' : 'Video watch-history events');
   $('#metric-videos-note').textContent = 'Distinct video IDs';
   $('#metric-channels-note').textContent = 'Identified creators';
   $('#metric-days-note').textContent = 'Days with a watch event';
   if (currentStats.channels?.[0]) {
-    $('#preview-creator').textContent = sourceMode === 'demo' ? 'Mark Rober' : currentStats.channels[0].name;
-    $('#preview-creator-sub').textContent = sourceMode === 'demo' ? 'Demo creator spotlight' : `${fmtNum(currentStats.channels[0].views)} watch events`;
+    $('#preview-creator').textContent = sourceMode === 'demo' && selectedContentFilter === 'all' ? 'Mark Rober' : currentStats.channels[0].name;
+    $('#preview-creator-sub').textContent = sourceMode === 'demo' && selectedContentFilter === 'all' ? 'Demo creator spotlight' : `${fmtNum(currentStats.channels[0].views)} watch events`;
   } else {
     $('#preview-creator').textContent = 'Your top creator';
     $('#preview-creator-sub').textContent = 'Import a watch-history export';
@@ -363,6 +398,13 @@ function renderChannelDetailRow(channel, index) {
   const name = escapeHTML(channel.name);
   return `<a class="rank-row detail-rank-row" href="${escapeHTML(href)}"${linkAttrs}><div class="rank-thumb">${index + 1}</div><div class="rank-details"><div class="rank-title">${name}</div><div class="rank-subtitle">${fmtNum(channel.uniqueVideos || 0)} unique videos</div></div><div class="rank-count">${fmtNum(channel.views)}<small>events</small></div></a>`;
 }
+function renderMusicRuleRow(channel) {
+  const override = channelOverrides[channel.key] || 'auto';
+  const autoText = `${fmtNum(channel.autoMusicEvents)} auto-music · ${fmtNum(channel.autoVideoEvents)} other`;
+  const reason = channel.topAutoReason || 'No clear music signal';
+  const selected = value => override === value ? ' selected' : '';
+  return `<div class="music-rule-row"><div class="rank-thumb">♫</div><div class="rank-details"><div class="rank-title">${escapeHTML(channel.name)}</div><div class="rank-subtitle">${fmtNum(channel.views)} events · ${escapeHTML(autoText)}</div><div class="music-rule-reason">Most common signal: ${escapeHTML(reason)}</div></div><label class="music-rule-control"><span class="sr-only">Content label for ${escapeHTML(channel.name)}</span><select data-channel-rule="${escapeHTML(channel.key)}" aria-label="Content label for ${escapeHTML(channel.name)}"><option value="auto"${selected('auto')}>Auto</option><option value="music"${selected('music')}>Music</option><option value="video"${selected('video')}>Video</option></select></label></div>`;
+}
 function renderCountDetailRow(label, count, unit = 'events', sublabel = '') {
   return `<div class="detail-data-row"><div class="rank-details"><div class="rank-title">${escapeHTML(label)}</div>${sublabel ? `<div class="rank-subtitle">${escapeHTML(sublabel)}</div>` : ''}</div><div class="rank-count">${fmtNum(count)}<small>${escapeHTML(unit)}</small></div></div>`;
 }
@@ -387,6 +429,12 @@ function getDetailsDefinition(key) {
     kicker: 'CREATOR LEADERBOARD', title: 'All watched creators', description: 'Every identified creator in the currently selected time range, ranked by recorded watch events.',
     items: (currentStats?.channels || []).filter(ch => ch.name !== 'Unknown creator'), search: ch => `${ch.name} ${ch.views} ${ch.uniqueVideos}`,
     render: renderChannelDetailRow
+  };
+  if (key === 'music-rules') return {
+    kicker: 'MUSIC DETECTION', title: 'Review music labels', description: 'Automatic labels are heuristics, not official artist verification. Choose Music or Video to override a channel for this browser session; Auto returns to per-entry detection.',
+    items: (currentStats?.channelsForClassification || []).filter(ch => ch.name !== 'Unknown creator'),
+    search: ch => `${ch.name} ${ch.views} ${ch.autoMusicEvents} ${ch.autoVideoEvents} ${ch.topAutoReason}`,
+    render: renderMusicRuleRow
   };
   if (key === 'subscriptions' || key === 'watched-subscriptions') {
     const items = getSortedSubscriptions();
@@ -621,6 +669,7 @@ function initialise() {
   try {
     worker = new Worker('/history-worker.js');
     worker.onmessage = event => handleWorkerMessage(event.data || {});
+    worker.postMessage({ type: 'overrides', overrides: { ...channelOverrides }, days: selectedRange, contentFilter: selectedContentFilter });
     worker.onerror = () => workerError('The local history parser encountered an error. Try reloading the page and importing again.');
   } catch {
     workerError('Your browser could not start the local history parser. Use a current browser and open TubeLens from its local web server.');
@@ -653,7 +702,20 @@ function initialise() {
   });
   $('#range-select').addEventListener('change', event => {
     selectedRange = event.target.value;
-    if (worker) worker.postMessage({ type: 'range', days: selectedRange });
+    requestCurrentStats();
+  });
+  $('#content-filter').addEventListener('change', event => {
+    selectedContentFilter = event.target.value;
+    requestCurrentStats();
+  });
+  document.addEventListener('change', event => {
+    const ruleSelect = event.target.closest('[data-channel-rule]');
+    if (!ruleSelect) return;
+    const key = ruleSelect.dataset.channelRule;
+    const value = ruleSelect.value;
+    if (value === 'music' || value === 'video') channelOverrides[key] = value;
+    else delete channelOverrides[key];
+    if (worker) worker.postMessage({ type: 'overrides', overrides: { ...channelOverrides }, days: selectedRange, contentFilter: selectedContentFilter });
   });
   $('#theme-toggle').addEventListener('click', toggleTheme);
   $('#disconnect-top').addEventListener('click', disconnectAccount);

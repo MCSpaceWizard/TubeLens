@@ -62,8 +62,13 @@
       <section class="dashboard-section" id="dashboard">
         <div class="section-heading">
           <div><div class="section-kicker">YOUR OVERVIEW <span class="demo-tag" id="demo-tag">DEMO DATA</span></div><h2>The big picture</h2><p id="range-description">A sample dashboard to show what's possible with your history.</p></div>
-          <label class="range-control"><span>TIME RANGE</span><select id="range-select" aria-label="Choose analytics time range"><option value="all">Entire history</option><option value="365">Last 12 months</option><option value="90">Last 90 days</option><option value="30">Last 30 days</option></select></label>
+          <div class="dashboard-controls">
+            <label class="range-control"><span>TIME RANGE</span><select id="range-select" aria-label="Choose analytics time range"><option value="all">Entire history</option><option value="365">Last 12 months</option><option value="90">Last 90 days</option><option value="30">Last 30 days</option></select></label>
+            <label class="range-control"><span>CONTENT TYPE</span><select id="content-filter" aria-label="Filter dashboard by content type"><option value="all">All content</option><option value="video">Regular videos</option><option value="music">Music</option></select></label>
+            <button class="text-button music-review-button" type="button" data-open-details="music-rules">Review music labels <span>↗</span></button>
+          </div>
         </div>
+        <p class="content-filter-note" id="content-filter-note">Music detection is estimated from source records, channel names, and title markers. You can review and override channel labels.</p>
         <div class="metric-grid">
           <article class="metric-card metric-featured"><div class="metric-top"><span class="metric-label">WATCH EVENTS</span><span class="metric-icon">▶</span></div><div class="metric-value" id="metric-views">2,481</div><div class="metric-foot"><span id="metric-views-note">Across your selected period</span><span class="metric-arrow">↗</span></div><div class="metric-spark spark-red" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
           <article class="metric-card"><div class="metric-top"><span class="metric-label">UNIQUE VIDEOS</span><span class="metric-icon muted">▤</span></div><div class="metric-value" id="metric-videos">1,726</div><div class="metric-foot"><span id="metric-videos-note">Distinct video IDs</span></div><div class="metric-spark spark-blue" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
